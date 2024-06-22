@@ -1,0 +1,20 @@
+1、设置用户签名 
+git config --global user.name xxx    设置用户签名
+git config --global user.email xxx@qq.com     设置用户签名
+
+2、初始化本地库
+git init
+
+3、从远程库拉取文件
+git remote add origin https://github.com********
+git pull origin master
+
+4、将文件上传到远程库
+git add . （这一步是先添加到暂存区）
+git commit -m "第一次上传"
+git push origin (master/创建分支的名字)
+
+5、分支操作
+查看分支：git branch -v
+创建分支：git branch 分支名  （相当于对主线分支的复制)
+切换分支：git checkout 分支名
