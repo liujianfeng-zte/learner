@@ -12,45 +12,47 @@ from src.infrastructure.utils.map_utils import get_keys_by_value
 warnings.filterwarnings("ignore")
 
 class FruitDeepLearner:
-    def __init__(self, mode='train'):
+    def __init__(self, mode='train', train_data_dir='G:/data/images/train', test_data_dir='G:/data/images/test', num_epochs=50, learning_rate=0.0001, image_size=64):
         self.train_class_to_fruit = None
         self.test_class_to_fruit = {}
         self.data_loader = None
-        self.num_epochs = 50
-        self.learning_rate = 0.0001
-        self.image_size = 64
+        self.num_epochs = num_epochs
+        self.learning_rate = learning_rate
+        self.image_size = image_size
         self.mode = mode
-        self.train_data_dir = 'G:/data/images/train'
-        self.test_data_dir = 'G:/data/images/test'
+        self.train_data_dir = train_data_dir
+        self.test_data_dir = test_data_dir
         self.model_path = f'fruit_{self.image_size}_{self.num_epochs}_{self.learning_rate}.pth'
+        self.model = None
 
     def prepare_data(self):
-        if self.mode == 'train':
-            self.train_class_to_fruit = {i: folder for i, folder in enumerate(sorted(os.listdir(self.train_data_dir)))}
+        try:
+            if self.mode == 'train':
+                self.train_class_to_fruit = {i: folder for i, folder in enumerate(sorted(os.listdir(self.train_data_dir)))}
+                print("生成的映射字典（训练集）:")
+                for class_id, fruit_name in self.train_class_to_fruit.items():
+                    print(f"类别 {class_id}: {fruit_name}")
 
-            print("生成的映射字典（训练集）:")
-            for class_id, fruit_name in self.train_class_to_fruit.items():
-                print(f"类别 {class_id}: {fruit_name}")
+                transform = augment_and_preprocess_image_for_training(self.image_size)
+                dataset = CustomImageFolder(root=self.train_data_dir, transform=transform)
+                print("训练数据集的长度为：{}".format(len(dataset)))
+                self.data_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
+                num_classes = len(self.train_class_to_fruit)
+                self.model = ImprovedCNN(num_classes=num_classes).cuda()
 
-            transform = augment_and_preprocess_image_for_training(self.image_size)
-            dataset = CustomImageFolder(root=self.train_data_dir, transform=transform)
-            print("训练数据集的长度为：{}".format(len(dataset)))
-            self.data_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
-            num_classes = len(self.train_class_to_fruit)
-            self.model = ImprovedCNN(num_classes=num_classes).cuda()
+            elif self.mode == 'test':
+                self.train_class_to_fruit = {i: folder for i, folder in enumerate(sorted(os.listdir(self.train_data_dir)))}
+                self.test_class_to_fruit = {i: folder for i, folder in enumerate(sorted(os.listdir(self.test_data_dir)))}
+                print("生成的映射字典（测试集）:")
+                for class_id, fruit_name in self.test_class_to_fruit.items():
+                    print(f"类别 {class_id}: {fruit_name}")
 
-        elif self.mode == 'test':
-            self.train_class_to_fruit = {i: folder for i, folder in enumerate(sorted(os.listdir(self.train_data_dir)))}
-            self.test_class_to_fruit = {i: folder for i, folder in enumerate(sorted(os.listdir(self.test_data_dir)))}
-
-            print("生成的映射字典（测试集）:")
-            for class_id, fruit_name in self.test_class_to_fruit.items():
-                print(f"类别 {class_id}: {fruit_name}")
-
-            transform = preprocess_image(self.image_size)
-            dataset = CustomImageFolder(root=self.test_data_dir, transform=transform)
-            print("测试数据集的长度为：{}".format(len(dataset)))
-            self.data_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
+                transform = preprocess_image(self.image_size)
+                dataset = CustomImageFolder(root=self.test_data_dir, transform=transform)
+                print("测试数据集的长度为：{}".format(len(dataset)))
+                self.data_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
+        except Exception as e:
+            print(f"数据准备过程中发生错误: {e}")
 
     def train(self):
         self.prepare_data()
@@ -65,7 +67,6 @@ class FruitDeepLearner:
         self.model.eval()
         all_labels, all_preds = test_model(self.model, self.data_loader)
 
-        # 打印实际标签和预测标签，并检查标签映射关系
         print("实际标签与预测标签:")
         for actual, pred in zip(all_labels, all_preds):
             print(f"实际标签: {actual}, 预测标签: {pred}")
@@ -75,15 +76,16 @@ class FruitDeepLearner:
             actual_fruit = self.test_class_to_fruit.get(actual, "未知类别")
             predicted_fruit = self.train_class_to_fruit.get(pred, "未知类别")
             print(f"实际: {actual_fruit}, 预测: {predicted_fruit}")
-            if(actual_fruit == predicted_fruit):
+            if actual_fruit == predicted_fruit:
                 accuracy_num += 1
         accuracy_rate = accuracy_num / len(all_labels)
-        # 精确到小数点后四位
         accuracy_rate = round(accuracy_rate, 4)
         print(f'测试集上的准确率: {accuracy_rate * 100}%')
 
 if __name__ == '__main__':
-    mode = input("请输入模式（train/test）：").strip()
+    # 明确提示用户输入
+    print("请输入模式（train/test）：")
+    mode = input().strip()
     fruit = FruitDeepLearner(mode=mode)
     if mode == 'train':
         fruit.train()
