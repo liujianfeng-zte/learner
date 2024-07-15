@@ -39,6 +39,7 @@ class Crawler:
     ]
 
     proxies = [
+        # 'http://111.231.86.149:7890',
         # 更多代理
     ]
 
@@ -61,7 +62,7 @@ class Crawler:
         return result
 
     def sleep(self):
-        sleep_time = round(self.__time_sleep + random.uniform(0, 3), 1)
+        sleep_time = round(self.__time_sleep + random.uniform(0, 1), 1)
         time.sleep(sleep_time)
         print(f'【sleep: {sleep_time}】')
 
@@ -95,6 +96,7 @@ class Crawler:
 
                 if not proxy_used:
                     try:
+                        print("使用本地IP")
                         response = requests.get(url, headers=self.headers, timeout=5)
                         use_local_ip = True
                     except requests.exceptions.RequestException as e:
@@ -144,6 +146,7 @@ class Crawler:
 
             if not proxy_used:
                 try:
+                    print("使用本地IP")
                     response = requests.get(url, headers=self.headers, timeout=5)
                     use_local_ip = True
                 except requests.exceptions.RequestException as e:
