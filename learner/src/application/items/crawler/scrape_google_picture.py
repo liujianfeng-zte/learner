@@ -1,14 +1,83 @@
+from selenium import webdriver
+import time
+import os
 import requests
-from bs4 import BeautifulSoup
-
-headers = {
-    "Referer": "https://www.google.com/",
-    "Cookie": "SID=g.a000lgjfCJG4M7amXM3lG4xzG_qCw7_gXRNN2kc2wDId0ofG-69wRwCAtQP_x8BLAwUHWO0NlQACgYKAesSARYSFQHGX2MizVhFru-7BI0M2se5_Ybi4xoVAUF8yKqv2iri7AENxGHdoQusnQ_B0076; __Secure-1PSID=g.a000lgjfCJG4M7amXM3lG4xzG_qCw7_gXRNN2kc2wDId0ofG-69wZ6i0nCBBzUmy9kQ8OBSanQACgYKAQISARYSFQHGX2MiOQfe92pG7IpveJ4ZtNB5KhoVAUF8yKqEYiyeJumdL-_QRFL-R0hf0076; __Secure-3PSID=g.a000lgjfCJG4M7amXM3lG4xzG_qCw7_gXRNN2kc2wDId0ofG-69wz7jUab38QW5w2lWh1kjJngACgYKAXUSARYSFQHGX2MiKr9S-PQs9G2TT3JV1yA78RoVAUF8yKp3LWkUTOJmDBxpwd8PwoQi0076; HSID=Ac53SiEN2c-lHB135; SSID=AcFDo-5SQwSo_oiL6; APISID=YuCE8-XrwDAWpjJ-/Aj0yqr7SqLQZFAQxw; SAPISID=UPFWc-8KaFrTqSwS/AzhAgCzjNL6T8-bsZ; __Secure-1PAPISID=UPFWc-8KaFrTqSwS/AzhAgCzjNL6T8-bsZ; __Secure-3PAPISID=UPFWc-8KaFrTqSwS/AzhAgCzjNL6T8-bsZ; SEARCH_SAMESITE=CgQIzpsB; AEC=AVYB7coQ-90OXaOugtSMLDyLKEiZ_KrnTEGjCh2wwCheN4zvZzsYZkV7qQ; __Secure-1PSIDTS=sidts-CjEB4E2dkQzWjy6y9ruGo7mXCWb8aeb1o0mrJJcU_iPfBAtoH4cL7o6ynhiTwZMc8RruEAA; __Secure-3PSIDTS=sidts-CjEB4E2dkQzWjy6y9ruGo7mXCWb8aeb1o0mrJJcU_iPfBAtoH4cL7o6ynhiTwZMc8RruEAA; NID=515=wH-HQ6pyU9DUipbw0TnEzRHGiIMhqYPyjgmEBslJx1plKg4dCH12ufb10-KvCL17B7rOkL0xX4NG8GERS1--VIbviKQCGBIJk1xJIM-5RvyNTfIJFptrBrVCiVwa9o0qoAURjFIftATz_GDgpV_LNt498K5Brw_hChJVdOaagoTqLNC-ykvfE8ZY35ebtHhF29tuEKvBUbVm2uZwyLioAfMH1nlC0VWKnv33ncyfplTpSycNhmckei8wRm9eG5TePit9UGRhPONSnzhYXwudX9F5srDAFv8n7VHwp4W43Elk36kfPH1l29fcFw2-p8ur3Na8YW15VbTVgkbdD2bL9h5Xm7_TB7c5XW-Dpv6SDLma5kA4Kt0U6CI; DV=E1IapWg9BK9X4NvUndzzyhlN6OIcCxkvSfGgakooqQQAAGCqGssnH9E8PQEAAFQ5Rwsg6qLjKsMBAHjU1yhfGuRCznAAAA; SIDCC=AKEyXzVJzop4FkziiijomNiEagBUy008O6RSXVLSELDbDMzi6x1i1q23_ujkfNHbKa5Ftu3amg; __Secure-1PSIDCC=AKEyXzWreg_eCvR28hYpWK0tXhcAD1nBDNQGhLW2whAFTksuCpLO2_-yJk8Rsm1q4EaKYC4aAw; __Secure-3PSIDCC=AKEyXzVGg8sj4XaEs6ayZvhStUaXfVQYMLrajsnREisLoo1w3vIXD7Pt1s8IAZVjcS1vWDDucQ",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-}
-
-url = "https://www.google.com/search?sca_esv=c90665de34067668&sca_upv=1&rlz=1C1CBFU_zh-CN__1107CN1107&sxsrf=ADLYWIIBq8bK1tW3NSVLM_iVMPmYqwCXDA:1720969968848&q=%E7%BE%8E%E5%A5%B3%E8%A3%B8%E4%BD%93&udm=2&fbs=AEQNm0AaBOazvTRM_Uafu9eNJJzCBjj7Qh2T44wVPlShdsqpCHCf2XxEw8Ao0hZsW9sc8CSxoFVmD_dL8woqla9mMNxB8BAZ6e6MkuWKTxgozaayWB_S2xn-_UqhCl-pdA-SoI5DzyoHjNTfrB3jxI6mhzsWo8ismO59uQ-ufUkFqkdkXv_wa8ykA6odmuOaulk67WpWn_cK&sa=X&ved=2ahUKEwjh4qXd6KaHAxVPTGwGHfzwAegQtKgLegQIDRAB&biw=1920&bih=867"
+from selenium.webdriver.common.by import By
+# 搜索关键词
+keyword = '猫'
+url = 'https://www.google.com.hk/search?q=' + keyword + '&tbm=isch'
 
 
+class Crawler_google_images:
+    # 初始化
+    def __init__(self):
+        self.url = url
 
+    # 获得Firefox驱动，并访问url
+    def init_browser(self):
+        browser = webdriver.Chrome()
+        # 访问url
+        browser.get(self.url)
+        # 最大化窗口，之后需要爬取窗口中所见的所有图片
+        browser.maximize_window()
+        return browser
+
+    # 下载图片
+    def download_images(self, browser, round=2):
+        picpath = '/Users/user/Desktop/photo/{}/'.format(keyword)
+        # 路径不存在时创建一个
+        if not os.path.exists(picpath): os.makedirs(picpath)
+        # 图片序号
+        count = 0
+        pos = 0
+        for i in range(round):
+            # 记录爬取当前的所有url
+            img_url_dic = []
+            pos += 500
+            # 向下滑动
+            js = 'var q=document.documentElement.scrollTop=' + str(pos)
+            # 执行js代码，使滚动条每次滚动500像素
+            browser.execute_script(js)
+            # 执行完滚动条之后等待3秒
+            time.sleep(3)
+            # 获取谷歌图片所在的标签名，即'img'
+            img_elements = browser.find_elements(by=By.TAG_NAME, value='img')
+            # 遍历抓到的所有webElement
+            for img_element in img_elements:
+                # 获取每个标签元素内部的url所在连接
+                img_url = img_element.get_attribute('src')
+                if isinstance(img_url, str):
+                    # 过滤掉无效的url
+                    if len(img_url) <= 200:
+                        # 将无效goole图标筛去
+                        if 'images' in img_url:
+                            # 每次爬取当前窗口，或许会重复，因此进行去重
+                            if img_url not in img_url_dic:
+                                try:
+                                    img_url_dic.append(img_url)
+                                    # 下载并保存图片到当前目录下
+                                    filename = picpath + str(count) + ".jpg"
+                                    r = requests.get(img_url)
+                                    with open(filename, 'wb') as f:
+                                        f.write(r.content)
+                                    f.close()
+                                    count += 1
+                                    print('this is ' + str(count) + 'st img')
+                                    # 防止反爬机制
+                                    time.sleep(0.5)
+                                except:
+                                    print('failure')
+
+    def run(self):
+        self.__init__()
+        browser = self.init_browser()
+        # 可以修改爬取的页面数，基本10页是100多张图片
+        self.download_images(browser, 3)
+        browser.close()
+        print("爬取完成")
+
+
+if __name__ == '__main__':
+    craw = Crawler_google_images()
+    craw.run()
 
