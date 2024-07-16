@@ -23,10 +23,10 @@ class Crawler:
         self.__start_amount = 0
         self.__counter = 0
         chrome_options = Options()
-        chrome_options.add_argument("--headless")  # 无头模式
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
+        # chrome_options.add_argument("--headless")  # 无头模式
+        # chrome_options.add_argument("--disable-gpu")
+        # chrome_options.add_argument("--no-sandbox")
+        # chrome_options.add_argument("--disable-dev-shm-usage")
 
         # 明确指定ChromeDriver路径
         chrome_service = Service(executable_path='G:\\resources\\chromedriver-win64\\chromedriver.exe')
