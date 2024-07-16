@@ -6,42 +6,36 @@ import random
 import re
 import sys
 import json
-import socket
-import requests
 import time
-from itertools import cycle
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 
-timeout = 5
-socket.setdefaulttimeout(timeout)
 
 class Crawler:
-
     def __init__(self):
-        # 睡眠时长
         self.__time_sleep = 1
         self.__amount = 0
         self.__start_amount = 0
         self.__counter = 0
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")  # 无头模式
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0',
-        'Cookie': '',
-        'Referer': 'https://image.baidu.com'
-    }
-    __per_page = 30
+        # 明确指定ChromeDriver路径
+        chrome_service = Service(executable_path='G:\\resources\\chromedriver-win64\\chromedriver.exe')
 
-    user_agents = [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/89.0',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/91.0.864.59',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0'
-        # 更多User-Agent
-    ]
-
-    proxies = [
-        # 'http://111.231.86.149:7890',
-        # 更多代理
-    ]
+        try:
+            self.driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+            print("ChromeDriver 启动成功")
+        except Exception as e:
+            print(f"启动ChromeDriver时出错: {e}")
 
     @staticmethod
     def get_suffix(name):
@@ -51,132 +45,92 @@ class Crawler:
         else:
             return '.jpeg'
 
-    @staticmethod
-    def handle_baidu_cookie(original_cookie, cookies):
-        if not cookies:
-            return original_cookie
-        result = original_cookie
-        for cookie in cookies:
-            result += cookie.split(';')[0] + ';'
-        result = result.rstrip(';')
-        return result
-
     def sleep(self):
         sleep_time = round(self.__time_sleep + random.uniform(0, 1), 1)
         time.sleep(sleep_time)
-        print(f'【sleep: {sleep_time}】')
+        print(f'【睡眠时间: {sleep_time}】')
 
-    def save_image(self, rsp_data, word):
+    def save_image(self, img_url, word):
         if not os.path.exists("./" + word):
             os.mkdir("./" + word)
         self.__counter = len(os.listdir('./' + word)) + 1
-        for image_info in rsp_data['data']:
+
+        max_retries = 3
+        for attempt in range(max_retries):
             try:
-                if 'replaceUrl' not in image_info or len(image_info['replaceUrl']) < 1:
-                    continue
-                obj_url = image_info['replaceUrl'][0]['ObjUrl']
-                thumb_url = image_info['thumbURL']
-                url = 'https://image.baidu.com/search/down?tn=download&ipn=dwnl&word=download&ie=utf8&fr=result&url=%s&thumburl=%s' % (
-                    requests.utils.quote(obj_url), requests.utils.quote(thumb_url))
-                self.sleep()
-                suffix = self.get_suffix(obj_url)
-                self.headers['User-Agent'] = random.choice(self.user_agents)
-                proxy_used = None
-                use_local_ip = False
-
-                for proxy in self.proxies:
-                    try:
-                        response = requests.get(url, headers=self.headers, proxies={"http": proxy, "https": proxy},
-                                                timeout=5)
-                        proxy_used = proxy
-                        break
-                    except requests.exceptions.RequestException:
-                        self.sleep()
-                        print(f"代理不可用，切换到下一个代理: {proxy}")
-
-                if not proxy_used:
-                    try:
-                        print("使用本地IP")
-                        response = requests.get(url, headers=self.headers, timeout=5)
-                        use_local_ip = True
-                    except requests.exceptions.RequestException as e:
-                        print(f"使用本地IP请求失败: {e}")
-                        continue
-
-                if response.status_code == 200:
+                self.driver.get(img_url)
+                try:
+                    image_element = self.driver.find_element(By.TAG_NAME, 'img')
+                    image_data = image_element.screenshot_as_png
+                    suffix = self.get_suffix(img_url)
                     filepath = './%s/%s' % (word, str(self.__counter) + str(suffix))
                     with open(filepath, 'wb') as f:
-                        f.write(response.content)
+                        f.write(image_data)
                     if os.path.getsize(filepath) < 5:
                         print("下载到了空文件，跳过!")
                         os.unlink(filepath)
-                        continue
-                else:
-                    print(f"HTTP error: {response.status_code}")
-                    continue
-            except Exception as err:
-                time.sleep(1)
-                print(err)
-                print("产生未知错误，放弃保存")
-                continue
-            else:
-                print(f"图片+1, 已有 {self.__counter} 张图片")
-                self.__counter += 1
-        return
+                    else:
+                        print(f"图片+1, 已有 {self.__counter} 张图片")
+                        self.__counter += 1
+                    break  # 成功保存图片，跳出重试循环
+                except NoSuchElementException:
+                    print("图片元素未找到，跳过保存")
+                    break
+            except WebDriverException as err:
+                print(f"WebDriver 错误: {err}")
+                print("当前 URL: ", img_url)
+                print(f"重试 {attempt + 1} 次")
+                self.sleep()  # 在重试之前等待
+                if attempt == max_retries - 1:
+                    print("超过最大重试次数，放弃保存")
+            except Exception as e:
+                print(f"未知错误: {e}")
+                break
 
     def get_images(self, word):
-        search = requests.utils.quote(word)
+        search = word
         pn = self.__start_amount
         while pn < self.__amount:
-            url = 'https://image.baidu.com/search/acjson?tn=resultjson_com&ipn=rj&ct=201326592&is=&fp=result&queryWord=%s&cl=2&lm=-1&ie=utf-8&oe=utf-8&adpicid=&st=-1&z=&ic=&hd=&latest=&copyright=&word=%s&s=&se=&tab=&width=&height=&face=0&istype=2&qc=&nc=1&fr=&expermode=&force=&pn=%s&rn=%d&gsm=1e&1594447993172=' % (
-                search, search, str(pn), self.__per_page)
-            self.headers['User-Agent'] = random.choice(self.user_agents)
-            proxy_used = None
-            use_local_ip = False
-
-            for proxy in self.proxies:
-                try:
-                    response = requests.get(url, headers=self.headers, proxies={"http": proxy, "https": proxy},
-                                            timeout=5)
-                    proxy_used = proxy
-                    break
-                except requests.exceptions.RequestException:
-                    self.sleep()
-                    print(f"代理不可用，切换到下一个代理: {proxy}")
-
-            if not proxy_used:
-                try:
-                    print("使用本地IP")
-                    response = requests.get(url, headers=self.headers, timeout=5)
-                    use_local_ip = True
-                except requests.exceptions.RequestException as e:
-                    print(f"使用本地IP请求失败: {e}")
-                    continue
-
+            url = f'https://image.baidu.com/search/acjson?tn=resultjson_com&ipn=rj&ct=201326592&is=&fp=result&queryWord={search}&cl=2&lm=-1&ie=utf-8&oe=utf-8&adpicid=&st=-1&z=&ic=&hd=&latest=&copyright=&word={search}&s=&se=&tab=&width=&height=&face=0&istype=2&qc=&nc=1&fr=&expermode=&force=&pn={pn}&rn={self.__per_page}&gsm=1e&1594447993172='
+            self.driver.get(url)
             try:
-                self.sleep()
-                self.headers['Cookie'] = self.handle_baidu_cookie(self.headers['Cookie'], response.cookies.get_dict())
-                rsp = response.text
-            except requests.exceptions.RequestException as e:
-                print(e)
-                print("请求错误:", url)
+                WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
+                rsp = self.driver.find_element(By.TAG_NAME, 'pre').text
+                rsp_data = json.loads(rsp, strict=False)
+                if 'data' not in rsp_data:
+                    print("触发了反爬机制，自动重试！")
+                else:
+                    for image_info in rsp_data['data']:
+                        if 'replaceUrl' in image_info and len(image_info['replaceUrl']) > 0:
+                            obj_url = image_info['replaceUrl'][0]['ObjUrl']
+                            if self.is_valid_url(obj_url):
+                                self.save_image(obj_url, word)
+                            else:
+                                print(f"无效 URL，跳过: {obj_url}")
+                    print("下载下一页")
+                    pn += self.__per_page
+                    self.sleep()
+            except (TimeoutException, WebDriverException) as e:
+                print(f"请求错误: {e}")
+                self.sleep()  # 等待一段时间再重试
                 continue
-
-            rsp_data = json.loads(rsp, strict=False)
-            if 'data' not in rsp_data:
-                print("触发了反爬机制，自动重试！")
-            else:
-                self.save_image(rsp_data, word)
-                print("下载下一页")
-                pn += self.__per_page
         print("下载任务结束")
-        return
+
+    def is_valid_url(self, url):
+        try:
+            self.driver.get(url)
+            WebDriverWait(self.driver, 2).until(EC.presence_of_element_located((By.TAG_NAME, 'img')))
+            return True
+        except Exception:
+            return False
 
     def start(self, word, total_page=1, start_page=1, per_page=30):
         self.__per_page = per_page
         self.__start_amount = (start_page - 1) * self.__per_page
         self.__amount = total_page * self.__per_page + self.__start_amount
         self.get_images(word)
+        self.driver.quit()
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
@@ -184,7 +138,8 @@ if __name__ == '__main__':
         parser.add_argument("-w", "--word", type=str, help="抓取关键词", required=True)
         parser.add_argument("-tp", "--total_page", type=int, help="需要抓取的总页数", required=True)
         parser.add_argument("-sp", "--start_page", type=int, help="起始页数", required=True)
-        parser.add_argument("-pp", "--per_page", type=int, help="每页大小", choices=[10, 20, 30, 40, 50, 60, 70, 80, 90, 100], default=30, nargs='?')
+        parser.add_argument("-pp", "--per_page", type=int, help="每页大小",
+                            choices=[10, 20, 30, 40, 50, 60, 70, 80, 90, 100], default=30, nargs='?')
         parser.add_argument("-d", "--delay", type=float, help="抓取延时（间隔）", default=0.05)
         args = parser.parse_args()
 
@@ -193,5 +148,3 @@ if __name__ == '__main__':
     else:
         crawler = Crawler()
         crawler.start('美女', 10, 2, 30)
-        # crawler.start('二次元 美女', 10, 1)
-        # crawler.start('帅哥', 5)
