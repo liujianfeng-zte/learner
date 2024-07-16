@@ -22,17 +22,17 @@ class Crawler:
         self.__amount = 0
         self.__start_amount = 0
         self.__counter = 0
-        chrome_options = Options()
-        # chrome_options.add_argument("--headless")  # 无头模式
-        # chrome_options.add_argument("--disable-gpu")
-        # chrome_options.add_argument("--no-sandbox")
-        # chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options = Options()  # 用于配置 WebDriver 启动时的选项
+        # chrome_options.add_argument("--headless")  # 启动无头模式，这意味着 Chrome 浏览器将以无图形界面的方式运行。这通常用于在服务器上执行自动化任务，因为不需要图形界面
+        # chrome_options.add_argument("--disable-gpu")  # 禁用 GPU 硬件加速。这通常用于解决在无头模式下的兼容性问题
+        # chrome_options.add_argument("--no-sandbox")  # 禁用沙箱模式。这是为了提高兼容性和避免某些权限问题，尤其是在容器化环境（如 Docker）中运行时。
+        # chrome_options.add_argument("--disable-dev-shm-usage")  # 禁用 /dev/shm（共享内存）使用。这是为了避免在某些环境（如容器）中由于共享内存不足而导致的问题。
 
         # 明确指定ChromeDriver路径
         chrome_service = Service(executable_path='G:\\resources\\chromedriver-win64\\chromedriver.exe')
 
         try:
-            self.driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+            self.driver = webdriver.Chrome(service=chrome_service, options=chrome_options)  # 创建一个 Chrome WebDriver 实例，使用之前配置的选项和服务。
             print("ChromeDriver 启动成功")
         except Exception as e:
             print(f"启动ChromeDriver时出错: {e}")
