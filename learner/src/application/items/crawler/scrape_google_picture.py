@@ -84,32 +84,25 @@ class Crawler:
                 print(f"未知错误: {e}")
                 break
 
-    def get_images(self, word, round=2):
-        url = 'https://www.google.com.hk/search?q=' + word + '&tbm=isch'
-        self.driver.get(url)
+    def get_images(self, word, round):
+        original_url = 'https://www.google.com.hk/search?q=' + word + '&tbm=isch'
+        self.driver.get(original_url)
         time.sleep(3)
         pos = 0
         for i in range(round):
             try:
                 # 记录爬取当前的所有url
                 img_url_dic = []
-                pos += 500
-                # 向下滑动
-                js = 'var q=document.documentElement.scrollTop=' + str(pos)
-                # 执行js代码，使滚动条每次滚动500像素
-                self.driver.execute_script(js)
-                # 执行完滚动条之后等待3秒
-                time.sleep(3)
                 # 获取谷歌图片所在的标签名，即'img'
                 img_elements = self.driver.find_elements(by=By.TAG_NAME, value='img')
                 # 遍历抓到的所有webElement
                 for img_element in img_elements:
                     # 获取每个标签元素内部的url所在连接
-                    img_url = img_element.get_attribute('src')
-                    if isinstance(img_url, str):
+                    url = img_element.get_attribute('src')
+                    if isinstance(url, str):
                         try:
                             # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
-                            if self.check_url(img_url, img_url_dic) is False:
+                            if self.check_url(url, img_url_dic) is False:
                                 continue
                             img_element.click()
                             page = self.driver.page_source
@@ -118,21 +111,34 @@ class Crawler:
                             matches = pattern.findall(page)
 
                             # 打印所有找到的URL
-                            for url in matches:
+                            for img_url in matches:
                                 # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
-                                if self.check_url(url, img_url_dic) is False:
+                                if self.check_url(img_url, img_url_dic) is False:
                                     continue
-                                img_url_dic.append(url)
+                                img_url_dic.append(img_url)
                                 # 下载并保存图片到当前目录下
-                                if self.is_valid_url(url):
-                                    self.save_image(url, word)
+                                if self.is_valid_url(img_url):
+                                    self.save_image(img_url, word)
                                 else:
-                                    print(f"无效 URL，跳过: {url}")
+                                    print(f"无效 URL，跳过: {img_url}")
                                 # 防止反爬机制
                                 self.sleep()
                         except (Exception):
                             print("failure")
                             continue
+
+                print("完成当前页面下载：{}".format(i + 1))
+                self.driver.get(original_url)
+                time.sleep(3)
+                print("开始滚动")
+                pos += 500
+                # 向下滑动
+                js = 'var q=document.documentElement.scrollTop=' + str(pos)
+                # 执行js代码，使滚动条每次滚动500像素
+                self.driver.execute_script(js)
+                # 执行完滚动条之后等待3秒
+                time.sleep(3)
+                print("滚动完成")
 
             except (Exception):
                 print("failure")
@@ -156,9 +162,9 @@ class Crawler:
                 return False
         return True
 
-    def start(self, word, round=30):
+    def start(self, word, round):
         self.__round = round
-        self.get_images(word)
+        self.get_images(word, round)
         self.driver.quit()
 
 
@@ -178,4 +184,4 @@ if __name__ == '__main__':
     print("请输入搜索关键词：")
     word = input().strip()
     crawler = Crawler()
-    crawler.start(word, 2)
+    crawler.start(word, 3)
