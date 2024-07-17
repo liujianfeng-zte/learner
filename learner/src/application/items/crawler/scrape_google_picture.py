@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-import argparse
 import os
 import random
 import re
-import sys
 import time
 
 from selenium import webdriver
@@ -64,10 +62,11 @@ class Crawler:
                     filepath = './%s/%s' % (word, str(self.__counter) + str(suffix))
                     with open(filepath, 'wb') as f:
                         f.write(image_data)
-                    if os.path.getsize(filepath) < 5:
+                    if os.path.getsize(filepath) < 100:
                         print("下载到了空文件，跳过!")
                         os.unlink(filepath)
                     else:
+                        print(img_url)
                         print(f"图片+1, 已有 {self.__counter} 张图片")
                         self.__counter += 1
                     break  # 成功保存图片，跳出重试循环
@@ -88,6 +87,7 @@ class Crawler:
     def get_images(self, word, round=2):
         url = 'https://www.google.com.hk/search?q=' + word + '&tbm=isch'
         self.driver.get(url)
+        time.sleep(3)
         pos = 0
         for i in range(round):
             try:
@@ -107,10 +107,10 @@ class Crawler:
                     # 获取每个标签元素内部的url所在连接
                     img_url = img_element.get_attribute('src')
                     if isinstance(img_url, str):
-                        # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
-                        if len(img_url) > 200 or 'images' not in img_url or 'googlelogo' in img_url or img_url in img_url_dic:
-                            continue
                         try:
+                            # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
+                            if self.check_url(img_url, img_url_dic) is False:
+                                continue
                             img_element.click()
                             page = self.driver.page_source
                             # 使用正则表达式查找所有符合条件的URL
@@ -119,7 +119,10 @@ class Crawler:
 
                             # 打印所有找到的URL
                             for url in matches:
-                                img_url_dic.append(img_url)
+                                # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
+                                if self.check_url(url, img_url_dic) is False:
+                                    continue
+                                img_url_dic.append(url)
                                 # 下载并保存图片到当前目录下
                                 if self.is_valid_url(url):
                                     self.save_image(url, word)
@@ -143,6 +146,15 @@ class Crawler:
             return True
         except Exception:
             return False
+
+    def check_url(self, url, img_url_dic):
+        if len(url) > 200 or 'images' not in url or url in img_url_dic:
+            return False
+        filter_list = ["/ui/", "icon", "googlelogo"]
+        for filter_element in filter_list:
+            if filter_element in url:
+                return False
+        return True
 
     def start(self, word, round=30):
         self.__round = round

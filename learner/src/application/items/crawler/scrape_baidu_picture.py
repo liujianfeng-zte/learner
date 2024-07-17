@@ -93,6 +93,7 @@ class Crawler:
         while pn < self.__amount:
             url = f'https://image.baidu.com/search/acjson?tn=resultjson_com&ipn=rj&ct=201326592&is=&fp=result&queryWord={search}&cl=2&lm=-1&ie=utf-8&oe=utf-8&adpicid=&st=-1&z=&ic=&hd=&latest=&copyright=&word={search}&s=&se=&tab=&width=&height=&face=0&istype=2&qc=&nc=1&fr=&expermode=&force=&pn={pn}&rn={self.__per_page}&gsm=1e&1594447993172='
             self.driver.get(url)
+            time.sleep(3)
             try:
                 WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
                 rsp = self.driver.find_element(By.TAG_NAME, 'pre').text
