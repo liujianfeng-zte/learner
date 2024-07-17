@@ -151,14 +151,19 @@ class Crawler:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-w", "--word", type=str, help="抓取关键词", required=True)
-        parser.add_argument("-r", "--round", type=int, help="滑动次数", required=True)
-        args = parser.parse_args()
+    # if len(sys.argv) > 1:
+    #     parser = argparse.ArgumentParser()
+    #     parser.add_argument("-w", "--word", type=str, help="抓取关键词", required=True)
+    #     parser.add_argument("-r", "--round", type=int, help="滑动次数", required=True)
+    #     args = parser.parse_args()
+    #
+    #     crawler = Crawler()
+    #     crawler.start(args.word, args.round)
+    # else:
+    #     crawler = Crawler()
+    #     crawler.start('美女', 2)
 
-        crawler = Crawler()
-        crawler.start(args.word, args.round)
-    else:
-        crawler = Crawler()
-        crawler.start('美女', 2)
+    print("请输入搜索关键词：")
+    word = input().strip()
+    crawler = Crawler()
+    crawler.start(word, 2)

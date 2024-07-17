@@ -133,18 +133,23 @@ class Crawler:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-w", "--word", type=str, help="抓取关键词", required=True)
-        parser.add_argument("-tp", "--total_page", type=int, help="需要抓取的总页数", required=True)
-        parser.add_argument("-sp", "--start_page", type=int, help="起始页数", required=True)
-        parser.add_argument("-pp", "--per_page", type=int, help="每页大小",
-                            choices=[10, 20, 30, 40, 50, 60, 70, 80, 90, 100], default=30, nargs='?')
-        parser.add_argument("-d", "--delay", type=float, help="抓取延时（间隔）", default=0.05)
-        args = parser.parse_args()
+    # if len(sys.argv) > 1:
+    #     parser = argparse.ArgumentParser()
+    #     parser.add_argument("-w", "--word", type=str, help="抓取关键词", required=True)
+    #     parser.add_argument("-tp", "--total_page", type=int, help="需要抓取的总页数", required=True)
+    #     parser.add_argument("-sp", "--start_page", type=int, help="起始页数", required=True)
+    #     parser.add_argument("-pp", "--per_page", type=int, help="每页大小",
+    #                         choices=[10, 20, 30, 40, 50, 60, 70, 80, 90, 100], default=30, nargs='?')
+    #     parser.add_argument("-d", "--delay", type=float, help="抓取延时（间隔）", default=0.05)
+    #     args = parser.parse_args()
+    #
+    #     crawler = Crawler()
+    #     crawler.start(args.word, args.total_page, args.start_page, args.per_page)
+    # else:
+    #     crawler = Crawler()
+    #     crawler.start('美女', 10, 2, 30)
 
-        crawler = Crawler()
-        crawler.start(args.word, args.total_page, args.start_page, args.per_page)
-    else:
-        crawler = Crawler()
-        crawler.start('美女', 10, 2, 30)
+    print("请输入搜索关键词：")
+    word = input().strip()
+    crawler = Crawler()
+    crawler.start(word, 10, 2, 30)
