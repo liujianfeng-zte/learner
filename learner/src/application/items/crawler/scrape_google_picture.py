@@ -86,13 +86,21 @@ class Crawler:
                 break
 
     def get_images(self, word, round):
+        img_url_list = []
         original_url = 'https://www.google.com.hk/search?q=' + word + '&tbm=isch'
         self.driver.get(original_url)
         time.sleep(3)
+        # 记录爬取当前的所有url
+        url_file_path = "G:\\data\\images\\download\\" + word + "\\url.txt"
+        if not os.path.exists(url_file_path):
+            # 'w' 模式表示写入模式，如果文件已存在则覆盖，不存在则创建
+            with open(url_file_path, 'w') as file:
+                pass
+        with open(url_file_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                img_url_list.append(line)
         for i in range(round):
             try:
-                # 记录爬取当前的所有url
-                img_url_dic = []
                 # 获取谷歌图片所在的标签名，即'img'
                 img_elements = self.driver.find_elements(by=By.TAG_NAME, value='img')
                 # 遍历抓到的所有webElement
@@ -102,7 +110,7 @@ class Crawler:
                     if isinstance(url, str):
                         try:
                             # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
-                            if self.check_url(url, img_url_dic) is False:
+                            if self.check_url(url, img_url_list) is False:
                                 continue
                             img_element.click()
                             page = self.driver.page_source
@@ -113,12 +121,13 @@ class Crawler:
                             # 打印所有找到的URL
                             for img_url in matches:
                                 # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
-                                if self.check_url(img_url, img_url_dic) is False:
+                                if self.check_url(img_url, img_url_list) is False:
                                     continue
-                                img_url_dic.append(img_url)
+                                img_url_list.append(img_url)
                                 # 下载并保存图片到当前目录下
                                 if self.is_valid_url(img_url):
                                     self.save_image(img_url, word)
+                                    self.write_url_to_file(img_url, url_file_path)
                                 else:
                                     print(f"无效 URL，跳过: {img_url}")
                                 # 防止反爬机制
@@ -155,14 +164,26 @@ class Crawler:
         except Exception:
             return False
 
-    def check_url(self, url, img_url_dic):
-        if len(url) > 200 or 'images' not in url or url in img_url_dic:
+    def check_url(self, url, img_url_list):
+        if len(url) > 1000 or 'images' not in url or url in img_url_list:
             return False
         filter_list = ["/ui/", "icon", "googlelogo"]
         for filter_element in filter_list:
             if filter_element in url:
                 return False
         return True
+
+    def write_url_to_file(self, url, filename):
+        """
+        将URL写入到指定的txt文件中，每次写入都会换行。
+
+        :param url: 要写入的URL字符串。
+        :param filename: txt文件的名称，默认为'urls.txt'。
+        """
+        # 以追加模式打开文件
+        with open(filename, 'a', encoding='utf-8') as file:
+            # 写入URL，并在末尾添加换行符
+            file.write(url + '\n')
 
     def start(self, word, round):
         self.__round = round
