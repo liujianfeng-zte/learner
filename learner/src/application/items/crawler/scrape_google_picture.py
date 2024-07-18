@@ -47,9 +47,10 @@ class Crawler:
         print(f'【睡眠时间: {sleep_time}】')
 
     def save_image(self, img_url, word):
-        if not os.path.exists("./" + word):
-            os.mkdir("./" + word)
-        self.__counter = len(os.listdir('./' + word)) + 1
+        original_path = "G:\\data\\images\\download\\"
+        if not os.path.exists(original_path + word):
+            os.mkdir(original_path + word)
+        self.__counter = len(os.listdir(original_path + word)) + 1
 
         max_retries = 2
         for attempt in range(max_retries):
@@ -59,7 +60,7 @@ class Crawler:
                     image_element = self.driver.find_element(By.TAG_NAME, 'img')
                     image_data = image_element.screenshot_as_png
                     suffix = self.get_suffix(img_url)
-                    filepath = './%s/%s' % (word, str(self.__counter) + str(suffix))
+                    filepath = original_path + word + "\\" + str(self.__counter) + suffix
                     with open(filepath, 'wb') as f:
                         f.write(image_data)
                     if os.path.getsize(filepath) < 100:
@@ -88,7 +89,6 @@ class Crawler:
         original_url = 'https://www.google.com.hk/search?q=' + word + '&tbm=isch'
         self.driver.get(original_url)
         time.sleep(3)
-        pos = 0
         for i in range(round):
             try:
                 # 记录爬取当前的所有url
@@ -130,14 +130,16 @@ class Crawler:
                 print("完成当前页面下载：{}".format(i + 1))
                 self.driver.get(original_url)
                 time.sleep(3)
-                print("开始滚动")
-                pos += 500
-                # 向下滑动
-                js = 'var q=document.documentElement.scrollTop=' + str(pos)
-                # 执行js代码，使滚动条每次滚动500像素
-                self.driver.execute_script(js)
-                # 执行完滚动条之后等待3秒
-                time.sleep(3)
+                pos = 0
+                for n in range(i):
+                    print("开始滚动")
+                    pos += 500
+                    # 向下滑动
+                    js = 'var q=document.documentElement.scrollTop=' + str(pos)
+                    # 执行js代码，使滚动条每次滚动500像素
+                    self.driver.execute_script(js)
+                    # 执行完滚动条之后等待5秒
+                    time.sleep(5)
                 print("滚动完成")
 
             except (Exception):
@@ -184,4 +186,4 @@ if __name__ == '__main__':
     print("请输入搜索关键词：")
     word = input().strip()
     crawler = Crawler()
-    crawler.start(word, 3)
+    crawler.start(word, 10)
