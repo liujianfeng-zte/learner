@@ -5,6 +5,7 @@ import random
 import re
 import time
 
+import requests
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
 from selenium.webdriver.chrome.options import Options
@@ -18,6 +19,9 @@ class Crawler:
     def __init__(self):
         self.__time_sleep = 1
         self.__round = 0
+        self.__counter = 0
+        self.__url_file_path = ""
+        self.__img_url_list = []
         chrome_options = Options()  # 用于配置 WebDriver 启动时的选项
         # chrome_options.add_argument("--headless")  # 启动无头模式，这意味着 Chrome 浏览器将以无图形界面的方式运行。这通常用于在服务器上执行自动化任务，因为不需要图形界面
         # chrome_options.add_argument("--disable-gpu")  # 禁用 GPU 硬件加速。这通常用于解决在无头模式下的兼容性问题
@@ -46,19 +50,25 @@ class Crawler:
         time.sleep(sleep_time)
         print(f'【睡眠时间: {sleep_time}】')
 
-    def save_image(self, img_url, word):
+    def save_image(self, url, word):
         original_path = "G:\\data\\images\\download\\"
         if not os.path.exists(original_path + word):
             os.mkdir(original_path + word)
         self.__counter = len(os.listdir(original_path + word))
 
-        max_retries = 2
-        for attempt in range(max_retries):
+        try:
+            self.driver.get(url)
             try:
-                self.driver.get(img_url)
-                try:
-                    image_element = self.driver.find_element(By.TAG_NAME, 'img')
-                    image_data = image_element.screenshot_as_png
+                image_elements = self.driver.find_elements(By.TAG_NAME, 'img')
+                for image_element in image_elements:
+                    # 获取图像的URL（注意：这里假设每个<img>标签都有src属性）
+                    img_url = image_element.get_attribute('src')
+                    # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
+                    if self.check_url(img_url, self.__img_url_list) is False:
+                        continue
+                    # 使用requests库下载图像
+                    response = requests.get(img_url)
+                    image_data = response.content
                     suffix = self.get_suffix(img_url)
                     filepath = original_path + word + "\\" + str(self.__counter) + suffix
                     with open(filepath, 'wb') as f:
@@ -69,39 +79,31 @@ class Crawler:
                     else:
                         print(img_url)
                         print(f"图片+1, 已有 {self.__counter} 张图片")
+                        self.write_url_to_file(f"【{self.__counter}】" + img_url, self.__url_file_path)
+                        self.__img_url_list.append(img_url)
                         self.__counter += 1
-                    break  # 成功保存图片，跳出重试循环
-                except NoSuchElementException:
-                    print("图片元素未找到，跳过保存")
-                    break
-            except WebDriverException as err:
-                print(f"WebDriver 错误")
-                print("当前 URL: ", img_url)
-                print(f"重试 {attempt + 1} 次")
-                self.sleep()  # 在重试之前等待
-                if attempt == max_retries - 1:
-                    print("超过最大重试次数，放弃保存")
-            except Exception as e:
-                print(f"未知错误: {e}")
-                break
+            except NoSuchElementException:
+                print("图片元素未找到，跳过保存")
+        except Exception as e:
+            print(f"未知错误: {e}")
 
     def get_images(self, word, round):
-        img_url_list = []
+
         original_url = 'https://www.google.com.hk/search?q=' + word + '&tbm=isch'
         self.driver.get(original_url)
         time.sleep(3)
         # 记录爬取当前的所有url
-        url_file_path = os.path.join(r"G:\data\images\download", word, "url.txt")
+        self.__url_file_path = os.path.join(r"G:\data\images\download", word, "url.txt")
         # 确保目录存在
-        os.makedirs(os.path.dirname(url_file_path), exist_ok=True)
+        os.makedirs(os.path.dirname(self.__url_file_path), exist_ok=True)
         # 检查文件是否存在，如果不存在则创建一个空文件
-        if not os.path.isfile(url_file_path):
-            print(f"文件 {url_file_path} 不存在。正在创建一个空的文件。")
-            with open(url_file_path, 'w', encoding='utf-8') as file:
+        if not os.path.isfile(self.__url_file_path):
+            print(f"文件 {self.__url_file_path} 不存在。正在创建一个空的文件。")
+            with open(self.__url_file_path, 'w', encoding='utf-8') as file:
                 pass  # 创建一个空文件
-        with open(url_file_path, 'r', encoding='utf-8') as file:
+        with open(self.__url_file_path, 'r', encoding='utf-8') as file:
             for line in file:
-                img_url_list.append(line)
+                self.__img_url_list.append(line)
         for i in range(round):
             try:
                 # 获取谷歌图片所在的标签名，即'img'
@@ -114,9 +116,10 @@ class Crawler:
                         if isinstance(url, str):
                             try:
                                 # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
-                                if self.check_url(url, img_url_list) is False:
+                                if self.check_url(url, self.__img_url_list) is False:
                                     continue
                                 img_element.click()
+                                time.sleep(2)
                                 page = self.driver.page_source
                                 # 使用正则表达式查找所有符合条件的URL
                                 pattern = re.compile(r'"(https://[^"]*?\.(?:jpg|png|jepg))"')
@@ -125,13 +128,11 @@ class Crawler:
                                 # 打印所有找到的URL
                                 for img_url in matches:
                                     # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
-                                    if self.check_url(img_url, img_url_list) is False:
+                                    if self.check_url(img_url, self.__img_url_list) is False:
                                         continue
-                                    img_url_list.append(img_url)
                                     # 下载并保存图片到当前目录下
                                     if self.is_valid_url(img_url):
                                         self.save_image(img_url, word)
-                                        self.write_url_to_file(img_url, url_file_path)
                                     else:
                                         print(f"无效 URL，跳过: {img_url}")
                                     # 防止反爬机制
@@ -143,7 +144,7 @@ class Crawler:
                         print("failure")
                         continue
 
-                print("完成当前页面下载：{}".format(i + 1))
+                print("完成当前页面下载：{}".format(i))
                 self.driver.get(original_url)
                 time.sleep(3)
                 pos = 0
@@ -172,9 +173,10 @@ class Crawler:
             return False
 
     def check_url(self, url, img_url_list):
-        if len(url) > 1000 or url in img_url_list:
-            return False
-        filter_list = ["/ui/", "icon", "googlelogo", "googleadservices"]
+        for used_img_url in img_url_list:
+            if url in used_img_url:
+                return False
+        filter_list = ["/ui/", "icon", "googlelogo", "googleadservices", ".svg"]
         for filter_element in filter_list:
             if filter_element in url:
                 return False
