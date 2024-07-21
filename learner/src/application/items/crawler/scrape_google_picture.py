@@ -80,8 +80,8 @@ class Crawler:
                     filepath = original_path + word + "\\" + str(self.__counter) + suffix
                     with open(filepath, 'wb') as f:
                         f.write(image_data)
-                    if os.path.getsize(filepath) / 1024 < 25:
-                        logger.info("下载到了空文件，跳过!")
+                    if os.path.getsize(filepath) / 1024 < 20:
+                        logger.info(f"下载到了空文件，跳过!,url:{img_url}")
                         os.unlink(filepath)
                     else:
                         logger.info(f"下载图片:{self.__counter}, url：{img_url}")
@@ -103,9 +103,12 @@ class Crawler:
         time.sleep(2)
         self.url_file_reader()
 
-        pos = 0
+        pos = 500
         for i in range(round):
             try:
+                logger.info(f"开始第{i + 1}轮测试")
+                if i > 0:
+                    self.element_scroll(self.search_driver, pos * i)
                 # 获取谷歌图片所在的标签名，即'img'
                 img_elements = self.search_driver.find_elements(by=By.TAG_NAME, value='img')
                 # 遍历抓到的所有webElement
@@ -117,6 +120,8 @@ class Crawler:
                             continue
                         try:
                             self.__new_click_driver = self.get_new_driver_by_copy_driver(self.search_driver)
+                            if i > 0:
+                                self.element_scroll(self.__new_click_driver, pos * i)
                             # 获取谷歌图片所在的标签名，即'img'
                             new_click_img_elements = self.__new_click_driver.find_elements(by=By.TAG_NAME, value='img')
                             new_click_img_element = new_click_img_elements[index]
@@ -138,30 +143,29 @@ class Crawler:
                                 self.__new_click_img_url_list.append(img_url)
                                 # 防止反爬机制
                                 self.sleep()
+                            self.write_url_to_file(original_img_url, self.__new_click_url_path)
                         except (Exception):
                             logger.error("查找图片url失败")
                             continue
                         finally:
                             self.__new_click_driver.quit()
-                        break
                     except Exception as e:
                         logger.error("原始img_elements失效")
                         continue
 
-                logger.info("完成当前页面下载：{}".format(i))
-                logger.info("开始滚动")
-                pos += 500
-                # 向下滑动
-                js = 'var q=document.documentElement.scrollTop=' + str(pos)
-                # 执行js代码，使滚动条每次滚动500像素
-                self.search_driver.execute_script(js)
-                # 执行完滚动条之后等待5秒
-                time.sleep(5)
-                logger.info("滚动完成")
-
             except (Exception):
                 logger.error("failure")
                 continue
+
+    def element_scroll(self, driver, pos):
+        logger.info("开始滚动")
+        # 向下滑动
+        js = f'var q=document.documentElement.scrollTop={pos}'
+        # 执行js代码，使滚动条每次滚动500像素
+        driver.execute_script(js)
+        # 执行完滚动条之后等待5秒
+        time.sleep(5)
+        logger.info("滚动完成")
 
     def get_new_driver_by_copy_driver(self, origianl_driver):
         # 保存当前页面的 URL
