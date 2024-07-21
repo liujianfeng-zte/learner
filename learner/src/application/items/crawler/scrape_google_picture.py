@@ -84,7 +84,7 @@ class Crawler:
                         logger.info("下载到了空文件，跳过!")
                         os.unlink(filepath)
                     else:
-                        print(img_url)
+                        logger.info(f"下载图片:{self.__counter}, url：{img_url}")
                         logger.info(f"图片+1, 已有 {self.__counter} 张图片")
                         self.write_url_to_file(f"【{self.__counter}】" + img_url, self.__url_file_path)
                         self.__img_url_list.append(img_url)
@@ -205,7 +205,7 @@ class Crawler:
                 self.__new_click_img_url_list.append(line)
 
         # 记录爬取当前的所有url
-        self.__original_url_path = os.path.join(r"G:\data\images\download", word, "new_click_url.txt")
+        self.__original_url_path = os.path.join(r"G:\data\images\download", word, "original_url.txt")
         # 确保目录存在
         os.makedirs(os.path.dirname(self.__original_url_path), exist_ok=True)
         # 检查文件是否存在，如果不存在则创建一个空文件
