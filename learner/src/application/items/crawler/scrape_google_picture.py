@@ -111,35 +111,39 @@ class Crawler:
                 # 遍历抓到的所有webElement
                 for index, img_element in enumerate(img_elements):
                     try:
-                        if self.check_url(img_element.get_attribute('src'), self.__original_img_url_list):
-                            try:
-                                self.__new_click_driver = self.get_new_driver_by_copy_driver(self.search_driver)
-                                # 获取谷歌图片所在的标签名，即'img'
-                                new_click_img_elements = self.__new_click_driver.find_elements(by=By.TAG_NAME, value='img')
-                                new_click_img_element = new_click_img_elements[index]
-                                new_click_img_element.click()
-                                time.sleep(3)
-                                page = self.__new_click_driver.page_source
-                                # 使用正则表达式查找所有符合条件的URL
-                                pattern = re.compile(r'"(https://[^"]*?\.(?:jpg|jepg))"')
-                                matches = pattern.findall(page)
-                                # 打印所有找到的URL
-                                for img_url in matches:
-                                    # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
-                                    if self.check_url(img_url, self.__new_click_img_url_list) is False:
-                                        logger.warning(f"当前url已存在new_click_url.txt中：{img_url}")
-                                        continue
-                                    # 下载并保存图片到当前目录下
-                                    self.save_image(img_url, word)
-                                    self.write_url_to_file(img_url, self.__new_click_url_path)
-                                    self.__new_click_img_url_list.append(img_url)
-                                    # 防止反爬机制
-                                    self.sleep()
-                            except (Exception):
-                                logger.error("查找图片url失败")
-                                continue
-                            finally:
-                                self.__new_click_driver.quit()
+                        original_img_url = img_element.get_attribute('src')
+                        if self.check_url(original_img_url, self.__original_img_url_list) is False:
+                            logger.warning(f"当前url已存在original_url.txt中：{original_img_url}")
+                            continue
+                        try:
+                            self.__new_click_driver = self.get_new_driver_by_copy_driver(self.search_driver)
+                            # 获取谷歌图片所在的标签名，即'img'
+                            new_click_img_elements = self.__new_click_driver.find_elements(by=By.TAG_NAME, value='img')
+                            new_click_img_element = new_click_img_elements[index]
+                            new_click_img_element.click()
+                            time.sleep(3)
+                            page = self.__new_click_driver.page_source
+                            # 使用正则表达式查找所有符合条件的URL
+                            pattern = re.compile(r'"(https://[^"]*?\.(?:jpg|jepg))"')
+                            matches = pattern.findall(page)
+                            # 打印所有找到的URL
+                            for img_url in matches:
+                                # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
+                                if self.check_url(img_url, self.__new_click_img_url_list) is False:
+                                    logger.warning(f"当前url已存在new_click_url.txt中：{img_url}")
+                                    continue
+                                # 下载并保存图片到当前目录下
+                                self.save_image(img_url, word)
+                                self.write_url_to_file(img_url, self.__new_click_url_path)
+                                self.__new_click_img_url_list.append(img_url)
+                                # 防止反爬机制
+                                self.sleep()
+                        except (Exception):
+                            logger.error("查找图片url失败")
+                            continue
+                        finally:
+                            self.__new_click_driver.quit()
+                        break
                     except Exception as e:
                         logger.error("原始img_elements失效")
                         continue
@@ -258,4 +262,4 @@ if __name__ == '__main__':
     logger.info("请输入搜索关键词：")
     word = input().strip()
     crawler = Crawler()
-    crawler.start(word, 1)
+    crawler.start(word, 20)
