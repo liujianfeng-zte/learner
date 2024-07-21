@@ -28,11 +28,16 @@ class Crawler:
         # chrome_options.add_argument("--no-sandbox")  # 禁用沙箱模式。这是为了提高兼容性和避免某些权限问题，尤其是在容器化环境（如 Docker）中运行时。
         # chrome_options.add_argument("--disable-dev-shm-usage")  # 禁用 /dev/shm（共享内存）使用。这是为了避免在某些环境（如容器）中由于共享内存不足而导致的问题。
 
+        verify_chrome_options = Options()  # 用于配置 WebDriver 启动时的选项
+        verify_chrome_options.add_argument("--headless")  # 启动无头模式，这意味着 Chrome 浏览器将以无图形界面的方式运行。这通常用于在服务器上执行自动化任务，因为不需要图形界面
+
         # 明确指定ChromeDriver路径
         chrome_service = Service(executable_path='G:\\resources\\chromedriver-win64\\chromedriver.exe')
 
         try:
-            self.driver = webdriver.Chrome(service=chrome_service, options=chrome_options)  # 创建一个 Chrome WebDriver 实例，使用之前配置的选项和服务。
+            self.search_driver = webdriver.Chrome(service=chrome_service, options=chrome_options)  # 创建一个 Chrome WebDriver 实例，使用之前配置的选项和服务。
+            print("ChromeDriver 启动成功")
+            self.verify_driver = webdriver.Chrome(service=chrome_service, options=verify_chrome_options)  # 创建一个 Chrome WebDriver 实例，使用之前配置的选项和服务。
             print("ChromeDriver 启动成功")
         except Exception as e:
             print(f"启动ChromeDriver时出错: {e}")
@@ -57,40 +62,29 @@ class Crawler:
         self.__counter = len(os.listdir(original_path + word))
 
         try:
-            self.driver.get(url)
-            try:
-                image_elements = self.driver.find_elements(By.TAG_NAME, 'img')
-                for image_element in image_elements:
-                    # 获取图像的URL（注意：这里假设每个<img>标签都有src属性）
-                    img_url = image_element.get_attribute('src')
-                    # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
-                    if self.check_url(img_url, self.__img_url_list) is False:
-                        continue
-                    # 使用requests库下载图像
-                    response = requests.get(img_url)
-                    image_data = response.content
-                    suffix = self.get_suffix(img_url)
-                    filepath = original_path + word + "\\" + str(self.__counter) + suffix
-                    with open(filepath, 'wb') as f:
-                        f.write(image_data)
-                    if os.path.getsize(filepath) < 100:
-                        print("下载到了空文件，跳过!")
-                        os.unlink(filepath)
-                    else:
-                        print(img_url)
-                        print(f"图片+1, 已有 {self.__counter} 张图片")
-                        self.write_url_to_file(f"【{self.__counter}】" + img_url, self.__url_file_path)
-                        self.__img_url_list.append(img_url)
-                        self.__counter += 1
-            except NoSuchElementException:
-                print("图片元素未找到，跳过保存")
+            # 使用requests库下载图像
+            response = requests.get(url)
+            image_data = response.content
+            suffix = self.get_suffix(url)
+            filepath = original_path + word + "\\" + str(self.__counter) + suffix
+            with open(filepath, 'wb') as f:
+                f.write(image_data)
+            if os.path.getsize(filepath) < 100:
+                print("下载到了空文件，跳过!")
+                os.unlink(filepath)
+            else:
+                print(url)
+                print(f"图片+1, 已有 {self.__counter} 张图片")
+                self.write_url_to_file(f"【{self.__counter}】" + url, self.__url_file_path)
+                self.__img_url_list.append(url)
+                self.__counter += 1
         except Exception as e:
             print(f"未知错误: {e}")
 
     def get_images(self, word, round):
 
         original_url = 'https://www.google.com.hk/search?q=' + word + '&tbm=isch'
-        self.driver.get(original_url)
+        self.search_driver.get(original_url)
         time.sleep(3)
         # 记录爬取当前的所有url
         self.__url_file_path = os.path.join(r"G:\data\images\download", word, "url.txt")
@@ -104,37 +98,36 @@ class Crawler:
         with open(self.__url_file_path, 'r', encoding='utf-8') as file:
             for line in file:
                 self.__img_url_list.append(line)
+        pos = 0
         for i in range(round):
             try:
                 # 获取谷歌图片所在的标签名，即'img'
-                img_elements = self.driver.find_elements(by=By.TAG_NAME, value='img')
+                img_elements = self.search_driver.find_elements(by=By.TAG_NAME, value='img')
                 # 遍历抓到的所有webElement
-                for img_element in img_elements:
-                    # 获取每个标签元素内部的url所在连接
-                    url = img_element.get_attribute('src')
+                for index, img_element in enumerate(img_elements):
                     try:
-                        if isinstance(url, str):
+                        if isinstance(img_element.get_attribute('src'), str):
                             try:
                                 # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
-                                if self.check_url(url, self.__img_url_list) is False:
+                                if self.check_url(img_element.get_attribute('src'), self.__img_url_list) is False:
                                     continue
-                                img_element.click()
+                                new_click_driver = self.get_new_driver_by_copy_driver(self.search_driver)
+                                # 获取谷歌图片所在的标签名，即'img'
+                                new_click_img_elements = new_click_driver.find_elements(by=By.TAG_NAME, value='img')
+                                new_click_img_element = new_click_img_elements[index]
+                                new_click_img_element.click()
                                 time.sleep(2)
-                                page = self.driver.page_source
+                                page = new_click_driver.page_source
                                 # 使用正则表达式查找所有符合条件的URL
-                                pattern = re.compile(r'"(https://[^"]*?\.(?:jpg|png|jepg))"')
+                                pattern = re.compile(r'"(https://[^"]*?\.(?:jpg|jepg))"')
                                 matches = pattern.findall(page)
-
                                 # 打印所有找到的URL
                                 for img_url in matches:
                                     # 过滤掉无效的url, 将无效goole图标筛去, 每次爬取当前窗口，或许会重复，因此进行去重
                                     if self.check_url(img_url, self.__img_url_list) is False:
                                         continue
                                     # 下载并保存图片到当前目录下
-                                    if self.is_valid_url(img_url):
-                                        self.save_image(img_url, word)
-                                    else:
-                                        print(f"无效 URL，跳过: {img_url}")
+                                    self.save_image(img_url, word)
                                     # 防止反爬机制
                                     self.sleep()
                             except (Exception):
@@ -145,32 +138,40 @@ class Crawler:
                         continue
 
                 print("完成当前页面下载：{}".format(i))
-                self.driver.get(original_url)
-                time.sleep(3)
-                pos = 0
-                for n in range(i):
-                    print("开始滚动")
-                    pos += 500
-                    # 向下滑动
-                    js = 'var q=document.documentElement.scrollTop=' + str(pos)
-                    # 执行js代码，使滚动条每次滚动500像素
-                    self.driver.execute_script(js)
-                    # 执行完滚动条之后等待5秒
-                    time.sleep(5)
+                print("开始滚动")
+                pos += 500
+                # 向下滑动
+                js = 'var q=document.documentElement.scrollTop=' + str(pos)
+                # 执行js代码，使滚动条每次滚动500像素
+                self.search_driver.execute_script(js)
+                # 执行完滚动条之后等待5秒
+                time.sleep(5)
                 print("滚动完成")
 
             except (Exception):
                 print("failure")
                 continue
 
-
-    def is_valid_url(self, url):
-        try:
-            self.driver.get(url)
-            WebDriverWait(self.driver, 2).until(EC.presence_of_element_located((By.TAG_NAME, 'img')))
-            return True
-        except Exception:
-            return False
+    def get_new_driver_by_copy_driver(self, origianl_driver):
+        # 保存当前页面的 URL
+        current_url = origianl_driver.current_url
+        # 保存 cookies
+        cookies = origianl_driver.get_cookies()
+        # 创建第二个 WebDriver 实例
+        chrome_options = Options()  # 用于配置 WebDriver 启动时的选项
+        # 明确指定ChromeDriver路径
+        chrome_service = Service(executable_path='G:\\resources\\chromedriver-win64\\chromedriver.exe')
+        new_driver = webdriver.Chrome(service=chrome_service, options=chrome_options)  # 创建一个 Chrome WebDriver 实例，使用之前配置的选项和服务。
+        # 打开相同的 URL
+        new_driver.get(current_url)
+        # 应用 cookies
+        for cookie in cookies:
+            new_driver.add_cookie(cookie)
+        # 刷新页面以应用 cookies
+        new_driver.refresh()
+        # 等待页面加载完成
+        time.sleep(3)
+        return new_driver
 
     def check_url(self, url, img_url_list):
         for used_img_url in img_url_list:
