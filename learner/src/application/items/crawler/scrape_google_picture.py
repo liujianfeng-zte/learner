@@ -143,7 +143,7 @@ class Crawler:
                                 self.__new_click_img_url_list.append(img_url)
                                 # 防止反爬机制
                                 self.sleep()
-                            self.write_url_to_file(original_img_url, self.__new_click_url_path)
+                            self.write_url_to_file(original_img_url, self.__original_url_path)
                         except (Exception):
                             logger.error("查找图片url失败")
                             continue
