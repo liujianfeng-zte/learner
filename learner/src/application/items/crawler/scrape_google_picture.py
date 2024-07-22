@@ -169,12 +169,13 @@ class Crawler:
                         try:
                             img_element.click()
                         except Exception as e:
+                            self.__new_click_driver.quit()
                             logger.error(f"点击元素失败:{original_img_url}")
                             continue
                         time.sleep(3)
                         page = self.__new_click_driver.page_source
                         # 使用正则表达式查找所有符合条件的URL
-                        pattern = re.compile(r'"(https://[^"]*?(?:/images/|images\.)[^"]*?\.(?:jpg|jpeg)[^"]*?)"')
+                        pattern = re.compile(r'"(https://[^"]*?(?:\.jpg|\.jpeg|/images/|images\.)[^"]*?)"')
                         matches = pattern.findall(page)
                         # 打印所有找到的URL
                         i = 0
